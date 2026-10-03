@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Compliance Audit &amp; Exceptions Dashboard — Demo</title>
+<style>
+  :root{
+    --paper:#f6f4ef; --panel:#ffffff; --ink:#1a1d21; --muted:#5b6570; --dim:#8a94a0;
+    --line:#e2e0d8; --accent:#0a5c4a; --accent-soft:#0a5c4a14;
+    --flag-high:#b0314a; --flag-high-bg:#b0314a14;
+    --flag-med:#b5841f; --flag-med-bg:#b5841f18;
+    --flag-ok:#0a7a52; --flag-ok-bg:#0a7a5214;
+    --shadow:0 1px 2px rgba(20,25,30,.05),0 4px 16px rgba(20,25,30,.06);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{
+    font-family:"Segoe UI",system-ui,-apple-system,Arial,sans-serif;
+    background:var(--paper); color:var(--ink); line-height:1.45;
+    font-size:14px; -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:1200px;margin:0 auto;padding:28px 24px 56px}
+
+  /* Header */
+  header.top{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:flex-end;gap:16px;
+    border-bottom:2px solid var(--accent);padding-bottom:16px;margin-bottom:4px}
+  .brand h1{font-size:22px;font-weight:700;letter-spacing:-.01em}
+  .brand .sub{color:var(--muted);font-size:13px;margin-top:3px;max-width:60ch}
+  .demo-badge{display:inline-block;background:var(--flag-med-bg);color:var(--flag-med);
+    font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;
+    padding:3px 9px;border-radius:4px;border:1px solid var(--flag-med)}
+  .by{text-align:right;font-size:12px;color:var(--muted)}
+  .by a{color:var(--accent);text-decoration:none}
+  .by a:hover{text-decoration:underline}
+
+  .note{background:var(--accent-soft);border:1px solid var(--line);border-left:3px solid var(--accent);
+    padding:9px 13px;border-radius:5px;font-size:12.5px;color:var(--muted);margin:16px 0 22px}
+
+  /* KPI row */
+  .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:14px;margin-bottom:24px}
+  .kpi{background:var(--panel);border:1px solid var(--line);border-radius:9px;padding:15px 16px;box-shadow:var(--shadow)}
+  .kpi .label{font-size:11.5px;color:var(--dim);text-transform:uppercase;letter-spacing:.05em;font-weight:600}
+  .kpi .value{font-size:26px;font-weight:700;margin-top:5px;letter-spacing:-.02em}
+  .kpi .value small{font-size:14px;font-weight:600;color:var(--muted)}
+  .kpi .delta{font-size:12px;margin-top:3px}
+  .kpi .delta.up{color:var(--flag-ok)}
+  .kpi .delta.down{color:var(--flag-high)}
+
+  /* Layout */
+  .grid{display:grid;grid-template-columns:1.6fr 1fr;gap:22px;align-items:start}
+  @media (max-width:860px){.grid{grid-template-columns:1fr}}
+
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:10px;box-shadow:var(--shadow);overflow:hidden}
+  .card h2{font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--accent);
+    padding:14px 16px 10px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center}
+  .card h2 .hint{font-size:11px;font-weight:500;color:var(--dim);text-transform:none;letter-spacing:0}
+
+  /* Controls */
+  .controls{display:flex;flex-wrap:wrap;gap:8px;padding:12px 16px;border-bottom:1px solid var(--line);align-items:center}
+  .controls label{font-size:12px;color:var(--muted);font-weight:600}
+  .controls select,.controls input{font:inherit;font-size:13px;padding:5px 9px;border:1px solid var(--line);
+    border-radius:6px;background:var(--paper);color:var(--ink)}
+  .controls input{flex:1;min-width:120px}
+  .pill{margin-left:auto;font-size:12px;color:var(--muted)}
+
+  /* Table */
+  .tbl-scroll{overflow-x:auto}
+  table{width:100%;border-collapse:collapse;font-size:13px}
+  th,td{text-align:left;padding:9px 16px;border-bottom:1px solid var(--line);white-space:nowrap}
+  th{font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--dim);font-weight:700;
+    cursor:pointer;user-select:none;position:sticky;top:0;background:var(--panel)}
+  th:hover{color:var(--accent)}
+  th .arrow{opacity:.5;font-size:10px}
+  tbody tr{cursor:pointer;transition:background .12s}
+  tbody tr:hover{background:var(--accent-soft)}
+  td.num{text-align:right;font-variant-numeric:tabular-nums}
+  td.money{text-align:right;font-variant-numeric:tabular-nums;font-weight:600}
+  .tag{display:inline-block;font-size:11px;font-weight:700;padding:2px 8px;border-radius:20px;letter-spacing:.02em}
+  .tag.high{background:var(--flag-high-bg);color:var(--flag-high)}
+  .tag.med{background:var(--flag-med-bg);color:var(--flag-med)}
+  .tag.ok{background:var(--flag-ok-bg);color:var(--flag-ok)}
+
+  /* Bars (right column) */
+  .barwrap{padding:14px 16px}
+  .barrow{display:grid;grid-template-columns:120px 1fr 56px;gap:10px;align-items:center;margin-bottom:11px;font-size:12.5px}
+  .barrow .bl{color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .bar{height:14px;background:var(--accent-soft);border-radius:4px;overflow:hidden}
+  .bar span{display:block;height:100%;background:var(--accent);border-radius:4px}
+  .barrow .bv{text-align:right;font-variant-numeric:tabular-nums;font-weight:600;color:var(--ink)}
+
+  /* Trend */
+  .trend{padding:16px}
+  .trend svg{width:100%;height:150px;display:block}
+  .legend{display:flex;gap:16px;font-size:12px;color:var(--muted);padding:0 16px 14px}
+  .legend b{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:5px;vertical-align:middle}
+
+  /* Modal */
+  .modal{position:fixed;inset:0;background:rgba(20,25,30,.45);display:none;align-items:center;justify-content:center;padding:20px;z-index:50}
+  .modal.open{display:flex}
+  .modal .box{background:var(--panel);border-radius:12px;max-width:460px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,.3);overflow:hidden}
+  .modal .mh{padding:16px 20px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center}
+  .modal .mh h3{font-size:15px}
+  .modal .mh button{background:none;border:none;font-size:22px;cursor:pointer;color:var(--dim);line-height:1}
+  .modal .mb{padding:18px 20px}
+  .modal .mb dl{display:grid;grid-template-columns:140px 1fr;gap:8px 12px;font-size:13px}
+  .modal .mb dt{color:var(--muted);font-weight:600}
+  .modal .mb dd{text-align:right;font-variant-numeric:tabular-nums}
+  .modal .reason{margin-top:16px;padding:12px;background:var(--flag-high-bg);border-radius:7px;font-size:12.5px;color:var(--ink)}
+
+  footer{margin-top:34px;padding-top:16px;border-top:1px solid var(--line);font-size:12px;color:var(--dim);text-align:center}
+  footer a{color:var(--accent);text-decoration:none}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="top">
+    <div class="brand">
+      <h1>Compliance Audit &amp; Exceptions Dashboard</h1>
+      <div class="sub">A demonstration audit workflow — ingests case records, reconciles key fields, and surfaces exceptions, value-at-risk and corrective-action priority per case.</div>
+      <div style="margin-top:9px"><span class="demo-badge">Demo · synthetic data</span></div>
+    </div>
+    <div class="by">
+      Built by <b>Jithin J</b><br>
+      <a href="https://github.com/jithinjolly2000-maker" target="_blank" rel="noopener">github.com/jithinjolly2000-maker</a>
+    </div>
+  </header>
+
+  <div class="note">
+    This is a portfolio demonstration. All names, amounts and cases below are <b>randomly generated sample data</b> — not from any employer. It illustrates the kind of audit / exceptions tooling and reporting I build: flagging, value-at-risk, filtering, trend and drill-down.
+  </div>
+
+  <!-- KPIs -->
+  <div class="kpis" id="kpis"></div>
+
+  <!-- Trend -->
+  <div class="card" style="margin-bottom:22px">
+    <h2>Weekly exceptions &amp; value-at-risk <span class="hint">8-week view</span></h2>
+    <div class="trend"><svg id="trend" viewBox="0 0 720 150" preserveAspectRatio="none"></svg></div>
+    <div class="legend">
+      <span><b style="background:var(--accent)"></b>Cases audited</span>
+      <span><b style="background:var(--flag-high)"></b>Exceptions found</span>
+    </div>
+  </div>
+
+  <div class="grid">
+    <!-- Case table -->
+    <div class="card">
+      <h2>Case exceptions <span class="hint">click a row for detail</span></h2>
+      <div class="controls">
+        <label>Risk</label>
+        <select id="fRisk">
+          <option value="">All</option>
+          <option value="high">High</option>
+          <option value="med">Medium</option>
+          <option value="ok">Cleared</option>
+        </select>
+        <label>Market</label>
+        <select id="fMarket"></select>
+        <input id="fSearch" type="text" placeholder="Search case ID or vendor…">
+        <span class="pill" id="count"></span>
+      </div>
+      <div class="tbl-scroll">
+        <table id="tbl">
+          <thead>
+            <tr>
+              <th data-k="id">Case <span class="arrow"></span></th>
+              <th data-k="vendor">Vendor <span class="arrow"></span></th>
+              <th data-k="market">Market <span class="arrow"></span></th>
+              <th data-k="var" class="num">Value&nbsp;at&nbsp;Risk <span class="arrow"></span></th>
+              <th data-k="risk">Flag <span class="arrow"></span></th>
+            </tr>
+          </thead>
+          <tbody id="tbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Breakdown -->
+    <div class="card">
+      <h2>Value-at-risk by market</h2>
+      <div class="barwrap" id="bars"></div>
+    </div>
+  </div>
+
+  <footer>
+    Static demo · built with vanilla HTML/CSS/JS · deployed on GitHub Pages ·
+    <a href="https://github.com/jithinjolly2000-maker/compliance-audit-dashboard" target="_blank" rel="noopener">source</a>
+  </footer>
+</div>
+
+<!-- Modal -->
+<div class="modal" id="modal">
+  <div class="box">
+    <div class="mh"><h3 id="mTitle">Case</h3><button id="mClose" aria-label="Close">&times;</button></div>
+    <div class="mb" id="mBody"></div>
+  </div>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  // ---- Synthetic data generation (deterministic-ish, clearly fake) ----
+  var markets = ["DE","FR","IT","ES","UK","NL"];
+  var vendorsBase = ["Nordwind","Lumina","Orbit","Vireo","Pallas","Castor","Meridian","Solace","Tindra","Halcyon","Caldera","Verity","Juniper","Ferro","Kestrel","Marlin","Onyx","Quill","Sable","Terra"];
+  var suffixes = ["GmbH","SARL","S.p.A.","S.L.","Ltd","B.V."];
+  var reasons = [
+    "VAT rate mismatch vs. source filing",
+    "Invoice total exceeds declared threshold",
+    "Missing supporting document reference",
+    "Duplicate transaction detected across periods",
+    "Currency conversion variance beyond tolerance",
+    "Registration number failed source validation",
+    "Period boundary misclassification"
+  ];
+  var rnd = (function(){ var s=20261004; return function(){ s=(s*1103515245+12345)&0x7fffffff; return s/0x7fffffff; }; })();
+  function pick(a){ return a[Math.floor(rnd()*a.length)]; }
+
+  var cases=[];
+  for(var i=0;i<64;i++){
+    var m=pick(markets);
+    var vendor=pick(vendorsBase)+" "+pick(suffixes);
+    var r=rnd();
+    var risk = r<0.11 ? "high" : (r<0.28 ? "med" : "ok");
+    var varAmt = risk==="high" ? Math.round(4000+rnd()*42000)
+               : risk==="med"  ? Math.round(800+rnd()*6000)
+               : Math.round(rnd()*400);
+    cases.push({
+      id:"CS-"+(10480+i),
+      vendor:vendor, market:m,
+      var:varAmt, risk:risk,
+      reason: risk==="ok" ? "No exception — reconciled clean" : pick(reasons),
+      amount: Math.round(varAmt*(1.5+rnd()*6)),
+      period: pick(["2026-Q1","2026-Q2","2026-Q3"])
+    });
+  }
+
+  // ---- KPIs ----
+  function money(n){ return "\u20ac"+n.toLocaleString("en-GB"); }
+  var totalVar = cases.reduce(function(s,c){return s+c.var;},0);
+  var exceptions = cases.filter(function(c){return c.risk!=="ok";}).length;
+  var highs = cases.filter(function(c){return c.risk==="high";}).length;
+  var cleanRate = Math.round((cases.length-exceptions)/cases.length*100);
+  var kpis=[
+    {label:"Cases audited",value:cases.length,delta:"+12 vs last wk",cls:"up"},
+    {label:"Exceptions flagged",value:exceptions,delta:highs+" high-risk",cls:"down"},
+    {label:"Value at risk",value:money(totalVar),delta:"surfaced early",cls:"down"},
+    {label:"Clean rate",value:cleanRate+"<small>%</small>",delta:"+3 pts",cls:"up"}
+  ];
+  document.getElementById("kpis").innerHTML = kpis.map(function(k){
+    return '<div class="kpi"><div class="label">'+k.label+'</div><div class="value">'+k.value+
+      '</div><div class="delta '+k.cls+'">'+k.delta+'</div></div>';
+  }).join("");
+
+  // ---- Market filter options ----
+  var fMarket=document.getElementById("fMarket");
+  fMarket.innerHTML='<option value="">All</option>'+markets.map(function(m){return '<option>'+m+'</option>';}).join("");
+
+  // ---- Table render / sort / filter ----
+  var sortK="var", sortDir=-1;
+  var tbody=document.getElementById("tbody");
+  var fRisk=document.getElementById("fRisk"), fSearch=document.getElementById("fSearch"), countEl=document.getElementById("count");
+
+  function tagHtml(r){ var t=r==="high"?"High":r==="med"?"Medium":"Cleared"; return '<span class="tag '+r+'">'+t+'</span>'; }
+
+  function current(){
+    var rk=fRisk.value, mk=fMarket.value, q=fSearch.value.trim().toLowerCase();
+    return cases.filter(function(c){
+      if(rk && c.risk!==rk) return false;
+      if(mk && c.market!==mk) return false;
+      if(q && c.id.toLowerCase().indexOf(q)<0 && c.vendor.toLowerCase().indexOf(q)<0) return false;
+      return true;
+    }).sort(function(a,b){
+      var va=a[sortK], vb=b[sortK];
+      if(typeof va==="string"){ return va<vb?-sortDir:va>vb?sortDir:0; }
+      return (va-vb)*sortDir;
+    });
+  }
+
+  function render(){
+    var rows=current();
+    countEl.textContent=rows.length+" of "+cases.length+" cases";
+    tbody.innerHTML=rows.map(function(c){
+      return '<tr data-id="'+c.id+'">'+
+        '<td>'+c.id+'</td>'+
+        '<td>'+c.vendor+'</td>'+
+        '<td>'+c.market+'</td>'+
+        '<td class="money">'+money(c.var)+'</td>'+
+        '<td>'+tagHtml(c.risk)+'</td></tr>';
+    }).join("");
+    // arrows
+    Array.prototype.forEach.call(document.querySelectorAll("th .arrow"),function(a){a.textContent="";});
+    var th=document.querySelector('th[data-k="'+sortK+'"] .arrow'); if(th) th.textContent=sortDir<0?" \u25bc":" \u25b2";
+    renderBars(rows);
+  }
+
+  // ---- Bars: VaR by market (from current filtered set) ----
+  function renderBars(rows){
+    var byM={}; markets.forEach(function(m){byM[m]=0;});
+    rows.forEach(function(c){ byM[c.market]+=c.var; });
+    var max=Math.max(1,Math.max.apply(null,markets.map(function(m){return byM[m];})));
+    document.getElementById("bars").innerHTML=markets.map(function(m){
+      var pct=Math.round(byM[m]/max*100);
+      return '<div class="barrow"><div class="bl">'+m+'</div>'+
+        '<div class="bar"><span style="width:'+pct+'%"></span></div>'+
+        '<div class="bv">'+money(byM[m])+'</div></div>';
+    }).join("");
+  }
+
+  // ---- Trend chart (SVG) ----
+  (function(){
+    var weeks=8, audited=[], exc=[];
+    for(var w=0;w<weeks;w++){ var a=Math.round(140+rnd()*120); audited.push(a); exc.push(Math.round(a*(0.12+rnd()*0.12))); }
+    var W=720,H=150,pad=10;
+    var maxA=Math.max.apply(null,audited)*1.1;
+    function x(i){ return pad+i*((W-2*pad)/(weeks-1)); }
+    function y(v){ return H-pad-(v/maxA)*(H-2*pad); }
+    function path(arr){ return arr.map(function(v,i){return (i?"L":"M")+x(i).toFixed(1)+" "+y(v).toFixed(1);}).join(" "); }
+    var svg=document.getElementById("trend");
+    var area=path(audited)+" L"+x(weeks-1)+" "+(H-pad)+" L"+x(0)+" "+(H-pad)+" Z";
+    svg.innerHTML=
+      '<path d="'+area+'" fill="var(--accent-soft)"/>'+
+      '<path d="'+path(audited)+'" fill="none" stroke="var(--accent)" stroke-width="2"/>'+
+      '<path d="'+path(exc)+'" fill="none" stroke="var(--flag-high)" stroke-width="2" stroke-dasharray="1"/>'+
+      audited.map(function(v,i){return '<circle cx="'+x(i).toFixed(1)+'" cy="'+y(v).toFixed(1)+'" r="2.5" fill="var(--accent)"/>';}).join("")+
+      exc.map(function(v,i){return '<circle cx="'+x(i).toFixed(1)+'" cy="'+y(v).toFixed(1)+'" r="2.5" fill="var(--flag-high)"/>';}).join("");
+  })();
+
+  // ---- Modal ----
+  var modal=document.getElementById("modal");
+  function openCase(id){
+    var c=cases.filter(function(x){return x.id===id;})[0]; if(!c) return;
+    document.getElementById("mTitle").textContent=c.id+" · "+c.vendor;
+    var reasonCls = c.risk==="ok" ? "" : "reason";
+    document.getElementById("mBody").innerHTML=
+      '<dl>'+
+      '<dt>Market</dt><dd>'+c.market+'</dd>'+
+      '<dt>Period</dt><dd>'+c.period+'</dd>'+
+      '<dt>Transaction amount</dt><dd>'+money(c.amount)+'</dd>'+
+      '<dt>Value at risk</dt><dd>'+money(c.var)+'</dd>'+
+      '<dt>Risk flag</dt><dd>'+tagHtml(c.risk)+'</dd>'+
+      '</dl>'+
+      '<div class="'+(reasonCls||"")+'" '+(reasonCls?'':'style="margin-top:16px;color:var(--muted);font-size:12.5px"')+'>'+
+        (c.risk==="ok"?"\u2713 ":"\u26a0 ")+c.reason+
+        (c.risk!=="ok"?'<br><br><b>Suggested action:</b> escalate to reconciliation queue; verify against source filing before period close.':'')+
+      '</div>';
+    modal.classList.add("open");
+  }
+  tbody.addEventListener("click",function(e){ var tr=e.target.closest("tr"); if(tr) openCase(tr.getAttribute("data-id")); });
+  document.getElementById("mClose").addEventListener("click",function(){modal.classList.remove("open");});
+  modal.addEventListener("click",function(e){ if(e.target===modal) modal.classList.remove("open"); });
+  document.addEventListener("keydown",function(e){ if(e.key==="Escape") modal.classList.remove("open"); });
+
+  // ---- Wire controls ----
+  document.querySelectorAll("th[data-k]").forEach(function(th){
+    th.addEventListener("click",function(){
+      var k=th.getAttribute("data-k");
+      if(sortK===k){ sortDir*=-1; } else { sortK=k; sortDir = (k==="var")?-1:1; }
+      render();
+    });
+  });
+  fRisk.addEventListener("change",render);
+  fMarket.addEventListener("change",render);
+  fSearch.addEventListener("input",render);
+
+  render();
+})();
+</script>
+</body>
+</html>
